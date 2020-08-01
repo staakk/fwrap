@@ -1,17 +1,18 @@
 package fwrap
 
+import io.github.staakk.fwrap.FunctionInvocation
 import io.github.staakk.fwrap.FunctionWrap
 import io.github.staakk.fwrap.Wrap
-import io.github.staakk.fwrap.WrapRegistry
 import org.jetbrains.kotlin.codegen.ClassBuilder
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
+import org.jetbrains.kotlin.js.descriptorUtils.nameIfStandardType
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOrigin
 import org.jetbrains.org.objectweb.asm.MethodVisitor
 import org.jetbrains.org.objectweb.asm.Opcodes
+import org.jetbrains.org.objectweb.asm.Type
 import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter
-import java.lang.reflect.Type
 
 class FWrapClassBuilder(
         delegateBuilder: ClassBuilder
@@ -26,9 +27,7 @@ class FWrapClassBuilder(
             exceptions: Array<out String>?
     ): MethodVisitor {
         val original = super.newMethod(origin, access, name, desc, signature, exceptions)
-
         val function = origin.descriptor as? FunctionDescriptor ?: return original
-
         val annotation = function.annotations.findAnnotation(FqName(Wrap::class.qualifiedName!!))
                 ?: return original
 
@@ -59,51 +58,90 @@ class FWrapClassBuilder(
     }
 }
 
-/*
-       LINENUMBER 9 L0
-    GETSTATIC io/github/staakk/fwrap/WrapRegistry.INSTANCE : Lio/github/staakk/fwrap/WrapRegistry;
-    INVOKEVIRTUAL io/github/staakk/fwrap/WrapRegistry.getWraps ()Ljava/util/Map;
-    LDC "testId"
-    INVOKEINTERFACE java/util/Map.get (Ljava/lang/Object;)Ljava/lang/Object; (itf)
-    DUP
-    IFNONNULL L1
-    INVOKESTATIC kotlin/jvm/internal/Intrinsics.throwNpe ()V
-   L1
-    CHECKCAST io/github/staakk/fwrap/FunctionWrap
-    INVOKEINTERFACE io/github/staakk/fwrap/FunctionWrap.before ()V (itf)
-   L2
-
- */
-
 private fun InstructionAdapter.onEnterFunction(function: FunctionDescriptor, wrapperId: String) {
+    val firstUnusedIndex = firstUnusedIndex(function)
+
+    // Create map
+    anew(Type.getType(HashMap::class.java))
+    dup()
+    invokespecial("java/util/HashMap", "<init>", "()V", false)
+    val paramMapIdx = firstUnusedIndex + 1
+    store(paramMapIdx, Type.getType(HashMap::class.java))
+
+    // Put params into map
+    var currentOffset = 1
+    function.valueParameters.forEach { param ->
+        val typeName = param.type.unwrap().nameIfStandardType.toString()
+
+        load(paramMapIdx, Type.getType(HashMap::class.java))
+        checkcast(Type.getType(HashMap::class.java))
+        visitLdcInsn(param.name.toString())
+
+        val loadOp = when (typeName) {
+            "Boolean",
+            "Byte",
+            "Short",
+            "Int" -> Opcodes.ILOAD
+            "Long" -> Opcodes.LLOAD
+            "Float" -> Opcodes.FLOAD
+            "Double" -> Opcodes.DLOAD
+            else -> Opcodes.ALOAD
+        }
+
+        visitVarInsn(loadOp, currentOffset)
+        when (typeName) {
+            "Boolean" -> invokestatic("java/lang/Boolean", "valueOf", "(Z)Ljava/lang/Boolean;", false)
+            "Byte" -> invokestatic("java/lang/Byte", "valueOf", "(B)Ljava/lang/Byte;", false)
+            "Short" -> invokestatic("java/lang/Short", "valueOf", "(S)Ljava/lang/Short;", false)
+            "Int" -> invokestatic("java/lang/Integer", "valueOf", "(I)Ljava/lang/Integer;", false)
+            "Long" -> invokestatic("java/lang/Long", "valueOf", "(J)Ljava/lang/Long;", false)
+            "Float" -> invokestatic("java/lang/Float", "valueOf", "(F)Ljava/lang/Float;", false)
+            "Double" -> invokestatic("java/lang/Double", "valueOf", "(D)Ljava/lang/Double;", false)
+        }
+
+        invokeinterface("java/util/Map", "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;")
+        pop()
+
+        currentOffset += when (typeName) {
+            "Double",
+            "Long"-> 2
+            else -> 1
+        }
+    }
+
     getstatic("io/github/staakk/fwrap/WrapRegistry", "INSTANCE", "Lio/github/staakk/fwrap/WrapRegistry;")
     invokevirtual("io/github/staakk/fwrap/WrapRegistry", "getWraps", "()Ljava/util/Map;", false)
     visitLdcInsn(wrapperId)
     invokeinterface("java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;")
-    checkcast(org.jetbrains.org.objectweb.asm.Type.getType(FunctionWrap::class.java))
-    invokeinterface("io/github/staakk/fwrap/FunctionWrap", "before", "()V")
+    checkcast(Type.getType(FunctionWrap::class.java))
+
+    // Create FunctionInvocation
+    anew(Type.getType(FunctionInvocation::class.java))
+    dup()
+    visitLdcInsn(function.name.toString())
+    load(0, Type.getType(Object::class.java))
+    load(paramMapIdx, Type.getType(HashMap::class.java))
+    checkcast(Type.getType(Map::class.java))
+    invokespecial("io/github/staakk/fwrap/FunctionInvocation", "<init>", "(Ljava/lang/String;Ljava/lang/Object;Ljava/util/Map;)V", false)
+
+    invokeinterface("io/github/staakk/fwrap/FunctionWrap", "before", "(Lio/github/staakk/fwrap/FunctionInvocation;)V")
 }
 
-/*
-    LINENUMBER 10 L1
-    GETSTATIC io/github/staakk/fwrap/WrapRegistry.INSTANCE : Lio/github/staakk/fwrap/WrapRegistry;
-    INVOKEVIRTUAL io/github/staakk/fwrap/WrapRegistry.getWraps ()Ljava/util/Map;
-    LDC "testId"
-    INVOKEINTERFACE java/util/Map.get (Ljava/lang/Object;)Ljava/lang/Object; (itf)
-    DUP
-    IFNONNULL L2
-    INVOKESTATIC kotlin/jvm/internal/Intrinsics.throwNpe ()V
-   L2
-    CHECKCAST io/github/staakk/fwrap/FunctionWrap
-    INVOKEINTERFACE io/github/staakk/fwrap/FunctionWrap.after ()V (itf)
-   L3
+private fun InstructionAdapter.firstUnusedIndex(function: FunctionDescriptor) =
+    function.valueParameters
+            .map {
+                when (it.type.unwrap().nameIfStandardType.toString()) {
+                    "Double",
+                    "Long"-> 2
+                    else -> 1
+                }
+            }.sum() + 1
 
- */
 private fun InstructionAdapter.onExitFunction(function: FunctionDescriptor, wrapperId: String) {
     getstatic("io/github/staakk/fwrap/WrapRegistry", "INSTANCE", "Lio/github/staakk/fwrap/WrapRegistry;")
     invokevirtual("io/github/staakk/fwrap/WrapRegistry", "getWraps", "()Ljava/util/Map;", false)
     visitLdcInsn(wrapperId)
     invokeinterface("java/util/Map", "get", "(Ljava/lang/Object;)Ljava/lang/Object;")
-    checkcast(org.jetbrains.org.objectweb.asm.Type.getType(FunctionWrap::class.java))
+    checkcast(Type.getType(FunctionWrap::class.java))
     invokeinterface("io/github/staakk/fwrap/FunctionWrap", "after", "()V")
 }

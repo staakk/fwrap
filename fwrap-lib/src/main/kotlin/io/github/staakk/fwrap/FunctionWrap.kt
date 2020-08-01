@@ -1,8 +1,9 @@
 package io.github.staakk.fwrap
 
+@Suppress("unused") // Public API.
 interface FunctionWrap {
 
-    fun before()
+    fun before(invocation: FunctionInvocation)
 
     fun after()
 }
