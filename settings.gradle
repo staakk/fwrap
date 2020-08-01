@@ -1,0 +1,4 @@
+rootProject.name = 'fwrap'
+include 'fwrap-cli'
+include 'fwrap-gradle'
+include 'fwrap-lib'

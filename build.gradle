@@ -1,0 +1,27 @@
+buildscript {
+    ext.ktVersion = "1.3.72"
+
+    repositories {
+        google()
+        jcenter()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$ktVersion"
+    }
+}
+
+subprojects {
+    repositories {
+        google()
+        jcenter()
+        mavenCentral()
+    }
+
+    // Install into local Maven repo with `./gradlew :kotlin-plugin:install :gradle-plugin:install`
+    apply plugin: "maven"
+
+    group = "io.github.staakk.fwrap"
+    version = "0.0.1"
+}
