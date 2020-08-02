@@ -7,14 +7,15 @@ import io.github.staakk.fwrap.WrapRegistry
 
 fun main() {
     WrapRegistry.wraps["testId"] = TestWrapper()
-    Test2().test(1)
+    Test2().test(2L, null)
 }
+var d : Int? = 3213213
 
 class Test2 {
     @Wrap("testId")
-    fun test(i: Int): Int {
+    fun test(l: Long, i: Int?) : Int? {
         println("test")
-        return 1876
+        return null
     }
 }
 
@@ -28,7 +29,7 @@ class TestWrapper: FunctionWrap {
         }
     }
 
-    override fun after() {
-        println("after")
+    override fun after(returnValue: Any?) {
+        println("after $returnValue")
     }
 }

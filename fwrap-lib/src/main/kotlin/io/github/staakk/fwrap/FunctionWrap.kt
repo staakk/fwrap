@@ -5,5 +5,5 @@ interface FunctionWrap {
 
     fun before(invocation: FunctionInvocation)
 
-    fun after()
+    fun after(returnValue: Any?)
 }
