@@ -36,5 +36,5 @@ compileTestKotlin {
     kotlinOptions.jvmTarget = "1.8"
 }
 
-mainClassName = 'io.github.staakk.fwraptest.TestKt'
+mainClassName = 'io.github.staakk.fwrapsamples.SamplesKt'
 
