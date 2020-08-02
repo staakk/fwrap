@@ -1,12 +1,15 @@
 package io.github.staakk.fwraptest
 
-import io.github.staakk.fwrap.FunctionInvocation
-import io.github.staakk.fwrap.FunctionWrap
-import io.github.staakk.fwrap.Wrap
-import io.github.staakk.fwrap.WrapRegistry
+import io.github.staakk.fwrap.*
 
 fun main() {
-    WrapRegistry.wraps["testId"] = TestWrapper()
+    FunctionWrapFactoryRegistry.registerFactory("testId", object : FunctionWrapFactory<TestWrapper> {
+        override fun create() = TestWrapper()
+    })
+
+    FunctionWrapFactoryRegistry.get("testId")
+    
+    Test2().test(2L, null)
     Test2().test(2L, null)
 }
 var d : Int? = 3213213
@@ -22,6 +25,7 @@ class Test2 {
 class TestWrapper: FunctionWrap {
 
     override fun before(invocation: FunctionInvocation) {
+        println("this: $this")
         println("name: ${invocation.name}")
         println("receiver: ${invocation.receiver}")
         invocation.params.forEach { (key, value) ->
@@ -30,6 +34,7 @@ class TestWrapper: FunctionWrap {
     }
 
     override fun after(returnValue: Any?) {
+        println("this: $this")
         println("after $returnValue")
     }
 }

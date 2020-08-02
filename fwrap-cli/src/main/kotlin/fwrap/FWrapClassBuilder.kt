@@ -3,7 +3,7 @@ package fwrap
 import io.github.staakk.fwrap.FunctionInvocation
 import io.github.staakk.fwrap.FunctionWrap
 import io.github.staakk.fwrap.Wrap
-import io.github.staakk.fwrap.WrapRegistry
+import io.github.staakk.fwrap.FunctionWrapFactoryRegistry
 import org.jetbrains.kotlin.codegen.ClassBuilder
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.js.descriptorUtils.nameIfStandardType
@@ -65,7 +65,7 @@ private val TYPE_HASHMAP = Type.getType(HashMap::class.java)
 private val TYPE_STRING = Type.getType(String::class.java)
 private val TYPE_FUNCTION_INVOCATION = Type.getType(FunctionInvocation::class.java)
 private val TYPE_FUNCTION_WRAP = Type.getType(FunctionWrap::class.java)
-private val TYPE_WRAP_REGISTRY = Type.getType(WrapRegistry::class.java)
+private val TYPE_FUNCTION_WRAP_FACTORY_REGISTRY = Type.getType(FunctionWrapFactoryRegistry::class.java)
 
 class FWrapClassBuilder(
         delegateBuilder: ClassBuilder
@@ -119,6 +119,10 @@ private fun InstructionAdapter.onEnterFunction(function: FunctionDescriptor, wra
 
     putFunctionParamsInMap(function, paramMapIdx)
     loadWrap(wrapId)
+
+    // Duplicate wrap reference to use on exit
+    dup()
+
     createFunctionInvocation(function, paramMapIdx)
     // Call FunctionWrap#before
     invokeinterface(TYPE_FUNCTION_WRAP.internalName, "before", "(L${TYPE_FUNCTION_INVOCATION.internalName};)V")
@@ -128,14 +132,19 @@ private fun InstructionAdapter.onExitFunction(function: FunctionDescriptor, wrap
     val isVoid = function.returnType == null || function.returnType!!.isUnit()
     val typeName = function.returnType?.nameIfStandardType
     val firstUnusedIndex = getFirstUnusedIndex(function)
+    val wrapIndex = firstUnusedIndex + 2
 
     if (!isVoid) {
         // Store return value and put it back on stack
         visitVarInsn(getStoreOpcode(function.returnType), firstUnusedIndex)
+        // Get wrap reference from stack and store it
+        visitVarInsn(Opcodes.ASTORE, wrapIndex)
+        // Put return value back on stack
         visitVarInsn(getLoadOpcode(function.returnType), firstUnusedIndex)
     }
 
-    loadWrap(wrapperId)
+    // Load wrap on stack
+    visitVarInsn(Opcodes.ALOAD, wrapIndex)
 
     if (isVoid) {
         visitLdcInsn("Unit")
@@ -181,14 +190,9 @@ private fun InstructionAdapter.invokeMapPut() = invokeinterface(
 )
 
 private fun InstructionAdapter.loadWrap(wrapId: String) {
-    getstatic(TYPE_WRAP_REGISTRY.internalName, "INSTANCE", "L${TYPE_WRAP_REGISTRY.internalName};")
-    invokevirtual(TYPE_WRAP_REGISTRY.internalName, "getWraps", "()L${TYPE_MAP.internalName};", false)
+    getstatic(TYPE_FUNCTION_WRAP_FACTORY_REGISTRY.internalName, "INSTANCE", "L${TYPE_FUNCTION_WRAP_FACTORY_REGISTRY.internalName};")
     visitLdcInsn(wrapId)
-    invokeinterface(
-            TYPE_MAP.internalName,
-            "get",
-            "(L${TYPE_OBJECT.internalName};)L${TYPE_OBJECT.internalName};"
-    )
+    invokevirtual(TYPE_FUNCTION_WRAP_FACTORY_REGISTRY.internalName, "get", "(L${TYPE_STRING.internalName};)L${TYPE_FUNCTION_WRAP.internalName};", false)
     checkcast(TYPE_FUNCTION_WRAP)
 }
 
