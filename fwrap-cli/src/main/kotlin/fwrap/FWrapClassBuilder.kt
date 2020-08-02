@@ -3,7 +3,7 @@ package fwrap
 import io.github.staakk.fwrap.FunctionInvocation
 import io.github.staakk.fwrap.FunctionWrap
 import io.github.staakk.fwrap.Wrap
-import io.github.staakk.fwrap.FunctionWrapFactoryRegistry
+import io.github.staakk.fwrap.FunctionWrapProviderRegistry
 import org.jetbrains.kotlin.codegen.ClassBuilder
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.js.descriptorUtils.nameIfStandardType
@@ -65,7 +65,7 @@ private val TYPE_HASHMAP = Type.getType(HashMap::class.java)
 private val TYPE_STRING = Type.getType(String::class.java)
 private val TYPE_FUNCTION_INVOCATION = Type.getType(FunctionInvocation::class.java)
 private val TYPE_FUNCTION_WRAP = Type.getType(FunctionWrap::class.java)
-private val TYPE_FUNCTION_WRAP_FACTORY_REGISTRY = Type.getType(FunctionWrapFactoryRegistry::class.java)
+private val TYPE_FUNCTION_WRAP_FACTORY_REGISTRY = Type.getType(FunctionWrapProviderRegistry::class.java)
 
 class FWrapClassBuilder(
         delegateBuilder: ClassBuilder
@@ -105,7 +105,7 @@ private class FWrapMethodVisitor(
 
     override fun visitInsn(opcode: Int) {
         if (RETURN_OPCODES.contains(opcode) || opcode == Opcodes.ATHROW)
-            InstructionAdapter(this).onExitFunction(function, wrapId)
+            InstructionAdapter(this).onExitFunction(function)
         super.visitInsn(opcode)
     }
 }
@@ -128,7 +128,7 @@ private fun InstructionAdapter.onEnterFunction(function: FunctionDescriptor, wra
     invokeinterface(TYPE_FUNCTION_WRAP.internalName, "before", "(L${TYPE_FUNCTION_INVOCATION.internalName};)V")
 }
 
-private fun InstructionAdapter.onExitFunction(function: FunctionDescriptor, wrapperId: String) {
+private fun InstructionAdapter.onExitFunction(function: FunctionDescriptor) {
     val isVoid = function.returnType == null || function.returnType!!.isUnit()
     val typeName = function.returnType?.nameIfStandardType
     val firstUnusedIndex = getFirstUnusedIndex(function)
