@@ -9,10 +9,12 @@ import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.js.descriptorUtils.nameIfStandardType
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.resolve.constants.StringValue
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOrigin
 import org.jetbrains.kotlin.types.KotlinType
 import org.jetbrains.kotlin.types.typeUtil.isPrimitiveNumberType
 import org.jetbrains.kotlin.types.typeUtil.isUnit
+import org.jetbrains.kotlin.utils.addToStdlib.cast
 import org.jetbrains.org.objectweb.asm.MethodVisitor
 import org.jetbrains.org.objectweb.asm.Opcodes
 import org.jetbrains.org.objectweb.asm.Type
@@ -84,79 +86,94 @@ class FWrapClassBuilder(
         val annotation = function.annotations.findAnnotation(FqName(Wrap::class.qualifiedName!!))
                 ?: return original
 
-        val wrapId = annotation
-                .allValueArguments[Name.identifier("id")]
-                ?.stringTemplateValue()
+        val wrapsIds = annotation
+                .allValueArguments[Name.identifier("ids")]
+                ?.value
+                ?.cast<ArrayList<StringValue>>()
+                ?.map { it.value }
                 ?: return original
 
-        return FWrapMethodVisitor(original, function, wrapId)
+        return FWrapMethodVisitor(original, function, wrapsIds)
     }
 }
 
 private class FWrapMethodVisitor(
         original: MethodVisitor,
         private val function: FunctionDescriptor,
-        private val wrapId: String
+        private val wrapsIds: List<String>
 ) : MethodVisitor(Opcodes.ASM7, original) {
     override fun visitCode() {
         super.visitCode()
-        InstructionAdapter(this).onEnterFunction(function, wrapId)
+        InstructionAdapter(this).onEnterFunction(function, wrapsIds)
     }
 
     override fun visitInsn(opcode: Int) {
         if (RETURN_OPCODES.contains(opcode) || opcode == Opcodes.ATHROW)
-            InstructionAdapter(this).onExitFunction(function)
+            InstructionAdapter(this).onExitFunction(function, wrapsIds)
         super.visitInsn(opcode)
     }
 }
 
-private fun InstructionAdapter.onEnterFunction(function: FunctionDescriptor, wrapId: String) {
+private fun InstructionAdapter.onEnterFunction(function: FunctionDescriptor, wrapsIds: List<String>) {
     val firstUnusedIndex = getFirstUnusedIndex(function)
 
     createParamMap()
     val paramMapIdx = firstUnusedIndex + 1
     store(paramMapIdx, TYPE_MAP)
-
     putFunctionParamsInMap(function, paramMapIdx)
-    loadWrap(wrapId)
 
-    // Duplicate wrap reference to use on exit
-    dup()
+    val wrapsLocalIdxStart = paramMapIdx + 1
+    wrapsIds.forEachIndexed { index, wrapId ->
+        loadWrap(wrapId)
+        // Duplicate wrap reference to use on exit
+        dup()
+        store(wrapsLocalIdxStart + index, TYPE_FUNCTION_WRAP)
+    }
 
+    val functionInvocationIdx = wrapsLocalIdxStart + wrapsIds.size + 1
     createFunctionInvocation(function, paramMapIdx)
-    // Call FunctionWrap#before
-    invokeinterface(TYPE_FUNCTION_WRAP.internalName, "before", "(L${TYPE_FUNCTION_INVOCATION.internalName};)V")
+    store(functionInvocationIdx, TYPE_FUNCTION_INVOCATION)
+
+    wrapsIds.forEachIndexed { index, _ ->
+        load(wrapsLocalIdxStart + index, TYPE_FUNCTION_WRAP)
+        load(functionInvocationIdx, TYPE_FUNCTION_INVOCATION)
+        // Call FunctionWrap#before
+        invokeinterface(TYPE_FUNCTION_WRAP.internalName, "before", "(L${TYPE_FUNCTION_INVOCATION.internalName};)V")
+    }
 }
 
-private fun InstructionAdapter.onExitFunction(function: FunctionDescriptor) {
+private fun InstructionAdapter.onExitFunction(function: FunctionDescriptor, wrapsIds: List<String>) {
     val isVoid = function.returnType == null || function.returnType!!.isUnit()
     val typeName = function.returnType?.nameIfStandardType
     val firstUnusedIndex = getFirstUnusedIndex(function)
-    val wrapIndex = firstUnusedIndex + 2
+    val wrapLocalIdxStart = firstUnusedIndex + 2
 
     if (!isVoid) {
         // Store return value and put it back on stack
         visitVarInsn(getStoreOpcode(function.returnType), firstUnusedIndex)
-        // Get wrap reference from stack and store it
-        visitVarInsn(Opcodes.ASTORE, wrapIndex)
+        wrapsIds.forEachIndexed { index, _ ->
+            // Get wrap reference from stack and store it
+            visitVarInsn(Opcodes.ASTORE, wrapLocalIdxStart + index)
+        }
         // Put return value back on stack
         visitVarInsn(getLoadOpcode(function.returnType), firstUnusedIndex)
     }
 
-    // Load wrap on stack
-    visitVarInsn(Opcodes.ALOAD, wrapIndex)
+    wrapsIds.forEachIndexed { index, _ ->
+        // Load wrap on stack
+        visitVarInsn(Opcodes.ALOAD, wrapLocalIdxStart + index)
 
-    if (isVoid) {
-        visitLdcInsn("Unit")
-    } else {
-        // Put FunctionWrap#after argument on stack
-        visitVarInsn(getLoadOpcode(function.returnType), firstUnusedIndex)
-        if (function.returnType!!.isPrimitiveNumberType()) {
-            primitiveTypeToObject(typeName)
+        if (isVoid) {
+            visitLdcInsn("Unit")
+        } else {
+            // Put FunctionWrap#after argument on stack
+            visitVarInsn(getLoadOpcode(function.returnType), firstUnusedIndex)
+            if (function.returnType!!.isPrimitiveNumberType()) {
+                primitiveTypeToObject(typeName)
+            }
         }
+        invokeinterface(TYPE_FUNCTION_WRAP.internalName, "after", "(L${TYPE_OBJECT.internalName};)V")
     }
-
-    invokeinterface(TYPE_FUNCTION_WRAP.internalName, "after", "(L${TYPE_OBJECT.internalName};)V")
 }
 
 private fun getFirstUnusedIndex(function: FunctionDescriptor) =

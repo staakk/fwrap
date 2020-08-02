@@ -3,19 +3,20 @@ package io.github.staakk.fwraptest
 import io.github.staakk.fwrap.*
 
 fun main() {
-    FunctionWrapFactoryRegistry.registerFactory("testId", object : FunctionWrapFactory<TestWrapper> {
-        override fun create() = TestWrapper()
+    FunctionWrapProviderRegistry.registerProvider("testId", object : FunctionWrapProvider<TestWrapper> {
+        override fun provide() = TestWrapper()
     })
 
-    FunctionWrapFactoryRegistry.get("testId")
+    FunctionWrapProviderRegistry.get("testId")
     
     Test2().test(2L, null)
+    println()
     Test2().test(2L, null)
 }
 var d : Int? = 3213213
 
 class Test2 {
-    @Wrap("testId")
+    @Wrap(["testId"])
     fun test(l: Long, i: Int?) : Int? {
         println("test")
         return null
