@@ -5,9 +5,6 @@ import io.github.staakk.fwrap.FunctionWrap
 import io.github.staakk.fwrap.Wrap
 import io.github.staakk.fwrap.FunctionWrapProviderRegistry
 import org.jetbrains.kotlin.codegen.ClassBuilder
-import org.jetbrains.kotlin.codegen.isJvmStaticInCompanionObject
-import org.jetbrains.kotlin.codegen.isJvmStaticInInlineClass
-import org.jetbrains.kotlin.codegen.isJvmStaticInObjectOrClassOrInterface
 import org.jetbrains.kotlin.descriptors.CallableMemberDescriptor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.js.descriptorUtils.nameIfStandardType

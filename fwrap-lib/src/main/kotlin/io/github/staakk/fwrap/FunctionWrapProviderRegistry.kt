@@ -7,7 +7,7 @@ import java.lang.IllegalStateException
  */
 @Suppress("unused") // Public API.
 object FunctionWrapProviderRegistry {
-    private val wraps = mutableMapOf<String, FunctionWrapProvider<*>>()
+    private val wraps = mutableMapOf<String, FunctionWrapProvider>()
 
     /**
      * Register provider to be used for providing [FunctionWrap]s for methods annotated with [Wrap] annotation.
@@ -17,7 +17,7 @@ object FunctionWrapProviderRegistry {
      * @param provider Factory to be registered.
      * @return Overridden provider, or `null` if there was no provider with given [id].
      */
-    fun registerProvider(id : String, provider: FunctionWrapProvider<*>): FunctionWrapProvider<*>? = wraps.put(id, provider)
+    fun registerProvider(id : String, provider: FunctionWrapProvider): FunctionWrapProvider? = wraps.put(id, provider)
 
     /**
      * Removes provider with [id] from this registry.
@@ -25,7 +25,7 @@ object FunctionWrapProviderRegistry {
      * @param id Factory unique identifier.
      * @return Removed provider or `null` if it didn't exist.
      */
-    fun removeProvider(id: String): FunctionWrapProvider<*>? = wraps.remove(id)
+    fun removeProvider(id: String): FunctionWrapProvider? = wraps.remove(id)
 
     /**
      * Get new [FunctionWrap] created by provider with [id].

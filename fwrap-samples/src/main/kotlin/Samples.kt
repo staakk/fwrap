@@ -28,8 +28,7 @@ fun functionWithGreetingAndLog(arg0: Int, arg1: String): String {
     return "$arg0 $arg1"
 }
 
-
-val simpleWrapperProvider = object : FunctionWrapProvider<FunctionWrap> {
+val simpleWrapperProvider = object : FunctionWrapProvider {
 
     override fun provide() = object : FunctionWrap {
 
@@ -46,16 +45,11 @@ val simpleWrapperProvider = object : FunctionWrapProvider<FunctionWrap> {
     }
 }
 
-val loggingWrapperProvider = object : FunctionWrapProvider<FunctionWrap> {
-
-    override fun provide() = object : FunctionWrap {
-
-        override fun before(invocation: FunctionInvocation) {
-            println("ENTRY: ${invocation.receiver}.${invocation.name}(${invocation.params.entries.joinToString { (key, value) -> "$key=$value" }})")
-        }
-
-        override fun after(returnValue: Any?) {
-            println("EXIT: return=$returnValue")
-        }
+val loggingWrapperProvider = FunctionWrapProvider.create(
+    callBefore = {
+        println("ENTRY: ${it.receiver}.${it.name}(${it.params.entries.joinToString { (key, value) -> "$key=$value" }})")
+    },
+    callAfter = {
+        println("EXIT: return=$it")
     }
-}
+)
