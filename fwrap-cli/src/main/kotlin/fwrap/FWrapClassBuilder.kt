@@ -5,6 +5,10 @@ import io.github.staakk.fwrap.FunctionWrap
 import io.github.staakk.fwrap.Wrap
 import io.github.staakk.fwrap.FunctionWrapProviderRegistry
 import org.jetbrains.kotlin.codegen.ClassBuilder
+import org.jetbrains.kotlin.codegen.isJvmStaticInCompanionObject
+import org.jetbrains.kotlin.codegen.isJvmStaticInInlineClass
+import org.jetbrains.kotlin.codegen.isJvmStaticInObjectOrClassOrInterface
+import org.jetbrains.kotlin.descriptors.CallableMemberDescriptor
 import org.jetbrains.kotlin.descriptors.FunctionDescriptor
 import org.jetbrains.kotlin.js.descriptorUtils.nameIfStandardType
 import org.jetbrains.kotlin.name.FqName
@@ -85,6 +89,10 @@ class FWrapClassBuilder(
         val function = origin.descriptor as? FunctionDescriptor ?: return original
         val annotation = function.annotations.findAnnotation(FqName(Wrap::class.qualifiedName!!))
                 ?: return original
+
+        if (function.kind == CallableMemberDescriptor.Kind.SYNTHESIZED) {
+            return original
+        }
 
         val wrapsIds = annotation
                 .allValueArguments[Name.identifier("ids")]
@@ -214,7 +222,7 @@ private fun InstructionAdapter.loadWrap(wrapId: String) {
 }
 
 private fun InstructionAdapter.putFunctionParamsInMap(function: FunctionDescriptor, paramMapIdx: Int) {
-    var currentOffset = 1
+    var currentOffset = if (function.isStatic()) 0 else 1
     function.valueParameters.forEach { param ->
         val typeName = param.type.unwrap().nameIfStandardType
 
@@ -240,7 +248,11 @@ private fun InstructionAdapter.createFunctionInvocation(function: FunctionDescri
     // 1st arg - function name
     visitLdcInsn(function.name.toString())
     // 2nd arg - receiver
-    load(0, TYPE_OBJECT)
+    if (function.isStatic()) {
+        aconst(null)
+    } else {
+        load(0, TYPE_OBJECT)
+    }
     // 3rd arg - params map
     load(paramMapIdx, TYPE_MAP)
     checkcast(TYPE_MAP)
@@ -252,3 +264,6 @@ private fun InstructionAdapter.createParamMap() {
     dup()
     invokespecial(TYPE_HASHMAP.internalName, "<init>", "()V", false)
 }
+
+private fun FunctionDescriptor.isStatic() =
+        containingDeclaration.toString().startsWith("package")

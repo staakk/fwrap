@@ -13,7 +13,7 @@ data class FunctionInvocation(
         /**
          * Receiver of the function.
          */
-        val receiver: Any,
+        val receiver: Any?,
 
         /**
          * Parameters of the function. Keys contain parameter name and values are parameter's values.
