@@ -1,0 +1,20 @@
+language: java
+install: skip
+
+dist: trusty
+jdk: openjdk8
+
+script:
+  - ./gradlew build :fwrap-cli:install :fwrap-gradle:install :fwrap-lib:install
+  - ./fwrap-samples/gradlew build
+
+before_cache:
+  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+
+cache:
+  directories:
+    - $HOME/.gradle/caches/
+    - $HOME/.gradle/wrapper/
+    - $HOME/.gradle/fwrap-samples/caches/
+    - $HOME/.gradle/fwrap-samples/wrapper/
