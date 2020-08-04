@@ -13,6 +13,8 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.resolve.constants.StringValue
 import org.jetbrains.kotlin.resolve.jvm.diagnostics.JvmDeclarationOrigin
 import org.jetbrains.kotlin.types.KotlinType
+import org.jetbrains.kotlin.types.typeUtil.isBoolean
+import org.jetbrains.kotlin.types.typeUtil.isChar
 import org.jetbrains.kotlin.types.typeUtil.isPrimitiveNumberType
 import org.jetbrains.kotlin.types.typeUtil.isUnit
 import org.jetbrains.kotlin.utils.addToStdlib.cast
@@ -34,6 +36,7 @@ private val LOAD_OPCODES = mapOf(
         "Boolean" to Opcodes.ILOAD,
         "Byte" to Opcodes.ILOAD,
         "Short" to Opcodes.ILOAD,
+        "Char" to Opcodes.ILOAD,
         "Int" to Opcodes.ILOAD,
         "Long" to Opcodes.LLOAD,
         "Float" to Opcodes.FLOAD,
@@ -42,7 +45,7 @@ private val LOAD_OPCODES = mapOf(
 
 private fun getLoadOpcode(type: KotlinType?) = when {
     type == null -> Opcodes.ALOAD
-    type.isPrimitiveNumberType() -> LOAD_OPCODES[type.toString()] ?: Opcodes.ALOAD
+    type.isPrimitiveNumberType() || type.isBoolean() || type.isChar() -> LOAD_OPCODES[type.toString()] ?: Opcodes.ALOAD
     else -> Opcodes.ALOAD
 }
 
@@ -50,6 +53,7 @@ private val STORE_OPCODES = mapOf(
         "Boolean" to Opcodes.ISTORE,
         "Byte" to Opcodes.ISTORE,
         "Short" to Opcodes.ISTORE,
+        "Char" to Opcodes.ISTORE,
         "Int" to Opcodes.ISTORE,
         "Long" to Opcodes.LSTORE,
         "Float" to Opcodes.FSTORE,
@@ -58,7 +62,7 @@ private val STORE_OPCODES = mapOf(
 
 private fun getStoreOpcode(type: KotlinType?) = when {
     type == null -> Opcodes.ASTORE
-    type.isPrimitiveNumberType() -> STORE_OPCODES[type.toString()] ?: Opcodes.ASTORE
+    type.isPrimitiveNumberType() || type.isBoolean() || type.isChar() -> STORE_OPCODES[type.toString()] ?: Opcodes.ASTORE
     else -> Opcodes.ASTORE
 }
 
@@ -228,7 +232,7 @@ private fun InstructionAdapter.putFunctionParamsInMap(function: FunctionDescript
 
         visitLdcInsn(param.name.toString())
         visitVarInsn(getLoadOpcode(param.type), currentOffset)
-        if (param.type.isPrimitiveNumberType()) {
+        if (param.type.isPrimitiveNumberType() || param.type.isBoolean() || param.type.isChar()) {
             primitiveTypeToObject(typeName)
         }
 

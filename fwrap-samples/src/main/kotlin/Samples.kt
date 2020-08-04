@@ -49,3 +49,7 @@ fun functionWithLog(arg0: Int, arg1: String): String {
 fun functionWithGreetingAndLog(arg0: Int, arg1: String): String {
     return "$arg0 $arg1"
 }
+
+fun a(b: Boolean) {
+
+}
