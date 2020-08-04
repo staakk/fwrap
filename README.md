@@ -4,7 +4,7 @@
 
 [![Build Status](https://travis-ci.org/staakk/fwrap.svg?branch=master)](https://travis-ci.org/staakk/fwrap)
 
-__FWrap__ is a library that allows you to provide callbacks for arbitrary function that will be called before and after it's execution.
+__FWrap__ is a library that allows you to provide callbacks for arbitrary function that will be called before and after its execution.
 
 ## Example
 To get callbacks before and after function execution you just need to register provider with an identifier. Then you can use it to wrap function using `@Wrap` annotation.
