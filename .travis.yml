@@ -5,7 +5,7 @@ dist: trusty
 jdk: openjdk8
 
 script:
-  - ./gradlew build :fwrap-cli:install :fwrap-gradle:install :fwrap-lib:install
+  - ./gradlew build :fwrap-cli:check :fwrap-cli:install :fwrap-gradle:install :fwrap-lib:install
   - ./fwrap-samples/gradlew build
 
 before_cache:
