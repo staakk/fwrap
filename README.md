@@ -6,6 +6,24 @@
 
 __FWrap__ is a library that allows you to provide callbacks for arbitrary function that will be called before and after it's execution.
 
-You can find usage samples in `fwrap-samples` directory.
+## Example
+To get callbacks before and after function execution you just need to register provider with an identifier. Then you can use it to wrap function using `@Wrap` annotation.
 
+```kotlin
+registerProvider(
+        id = "foo",
+        callBefore = { println("Hello from function `${it.name}()`.") },
+        callAfter = { println("Goodbye, return value was `$it`.") }
+)
 
+@Wrap(["foo"])
+fun bar() = 42
+```
+
+Executing function `bar` will produce following output:
+```text
+Hello from function `bar()`.
+Goodbye, return value was `42`.
+```
+
+You can find more usage examples in `fwrap-samples` directory.
