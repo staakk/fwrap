@@ -4,7 +4,7 @@ buildscript {
     }
 
     dependencies {
-        classpath "io.github.staakk.fwrap:fwrap-gradle:0.0.1"
+        classpath "io.github.staakk.fwrap:fwrap-gradle:0.0.2"
     }
 }
 
@@ -16,17 +16,17 @@ plugins {
 apply plugin: 'fwrap.plugin'
 
 group 'io.github.staakk.fwrap'
-version '1.0-SNAPSHOT'
+version '0.0.2'
 
 repositories {
     mavenCentral()
-    mavenLocal()
     jcenter()
+    maven { url "https://jitpack.io" }
 }
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
-    implementation "io.github.staakk.fwrap:fwrap-lib:0.0.1"
+    implementation "com.github.staakk.fwrap:fwrap-lib:0.0.2"
 }
 
 compileKotlin {

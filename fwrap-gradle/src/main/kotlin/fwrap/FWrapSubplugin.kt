@@ -30,9 +30,9 @@ class FWrapSubplugin : KotlinGradleSubplugin<AbstractCompile> {
     override fun getCompilerPluginId() = "fwrap"
 
     override fun getPluginArtifact() = SubpluginArtifact(
-            groupId = "io.github.staakk.fwrap",
+            groupId = "com.github.staakk.fwrap",
             artifactId = "fwrap-cli",
-            version = "0.0.1"
+            version = "0.0.2"
     )
 
     override fun isApplicable(project: Project, task: AbstractCompile) =

@@ -19,9 +19,8 @@ subprojects {
         mavenCentral()
     }
 
-    // Install into local Maven repo with `./gradlew :kotlin-plugin:install :gradle-plugin:install`
     apply plugin: "maven"
 
     group = "io.github.staakk.fwrap"
-    version = "0.0.1"
+    version = "0.0.2"
 }
