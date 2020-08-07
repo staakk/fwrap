@@ -1,11 +1,16 @@
-apply plugin: "java-gradle-plugin"
-apply plugin: "org.jetbrains.kotlin.jvm"
-apply plugin: "kotlin-kapt"
+plugins {
+    id "java-gradle-plugin"
+    id "org.jetbrains.kotlin.jvm"
+    id "kotlin-kapt"
+    id 'com.gradle.plugin-publish' version '0.12.0'
+}
 
 gradlePlugin {
     plugins {
         simplePlugin {
             id = "fwrap.plugin"
+            displayName = "FWrap"
+            description = "Part of FWrap - library for wrapping function calls."
             implementationClass = "fwrap.FWrapPlugin"
         }
     }
@@ -14,10 +19,16 @@ gradlePlugin {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$ktVersion"
 
-    // contains classes like Subplugin, SubpluginOption, etc
     implementation "org.jetbrains.kotlin:kotlin-gradle-plugin-api:$ktVersion"
 
-    // Needed to register Subplugin as a service
     compileOnly "com.google.auto.service:auto-service:1.0-rc4"
     kapt "com.google.auto.service:auto-service:1.0-rc4"
+}
+
+
+
+pluginBundle {
+    website = 'https://github.com/staakk/fwrap/blob/master/README.md'
+    vcsUrl = 'https://github.com/staakk/fwrap.git'
+    tags = ['kotlin', 'compiler-plugin', 'util']
 }
