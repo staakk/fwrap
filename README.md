@@ -27,3 +27,45 @@ Goodbye, return value was `42`.
 ```
 
 You can find more usage examples in `fwrap-samples` directory.
+
+## Usage
+To use the plugin add following to your `build.gradle`:
+```groovy
+plugins {
+  id "fwrap.plugin" version "0.0.2"
+}
+
+//...
+
+allprojects {
+    repositories {
+        maven { url 'https://jitpack.io' }
+    }
+}
+
+//...
+
+dependencies {
+    implementation "com.github.staakk.fwrap:fwrap-lib:0.0.2"
+}
+```
+Alternatively if you are using Gradle with Kotlin:
+```kotlin
+plugins {
+  id("fwrap.plugin") version "0.0.2"
+}
+
+//...
+
+allprojects {
+    repositories {
+        maven(url = "https://jitpack.io")
+    }
+}
+
+//...
+
+dependencies {
+    implementation("com.github.staakk.fwrap:fwrap-lib:0.0.2")
+}
+```
